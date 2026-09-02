@@ -247,6 +247,8 @@ Expected: `claude auth status` reports a logged-in account, no error.
 
 ### Task 6: Antigravity CLI — install and authenticate
 
+> **⛔ BLOCKED — deferred 2026-09-02 (geo-restriction).** Antigravity's eligibility check fails on this server: *"Your current account is not eligible for Antigravity, because it is not currently available in your location."* This OVH host is in France/EU, where Google has not yet made Antigravity available — not a config error, and not to be worked around (bypassing the eligibility check violates Google's ToS). No dependency on this task elsewhere in the plan (Task 7+ Hermes and Caddy don't need `agy`), so the rest proceeds without it. Revisit if Google opens the region or an eligible account/region becomes available. Steps below are left intact for that future retry.
+
 **Files:** none
 
 **Interfaces:**
