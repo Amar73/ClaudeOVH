@@ -188,13 +188,15 @@ Expected: `enabled` then `active`.
 
 ### Task 5: Claude Code — install and authenticate
 
+> **✅ DONE — verified 2026-09-02.** `claude 2.1.252` installed at `~/.local/bin/claude`; `claude auth status` reports `loggedIn: true` via `claude.ai` (firstParty). All steps below satisfied de facto; checkboxes marked accordingly.
+
 **Files:** none (installs to `~/.local/bin` on server, no root)
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
 - Produces: `claude` binary on `PATH`, authenticated session usable by later tasks (e.g. drafting deployment notes from the server itself, if ever needed).
 
-- [ ] **Step 1: Run the native installer**
+- [x] **Step 1: Run the native installer**
 
 Run:
 ```bash
@@ -202,7 +204,7 @@ ssh ovh 'curl -fsSL https://claude.ai/install.sh | bash'
 ```
 Expected: completes in well under a minute, ends with a success message pointing at `~/.local/bin/claude`.
 
-- [ ] **Step 2: Verify the binary is on PATH in a fresh session**
+- [x] **Step 2: Verify the binary is on PATH in a fresh session**
 
 Run:
 ```bash
@@ -210,7 +212,7 @@ ssh -o ControlPath=none ovh 'claude --version'
 ```
 Expected: prints a version string, not "command not found". If `PATH` isn't picked up, check `~/.bashrc` for the line the installer appends and re-source it.
 
-- [ ] **Step 3: Start an interactive OAuth login in tmux**
+- [x] **Step 3: Start an interactive OAuth login in tmux**
 
 Run:
 ```bash
@@ -220,11 +222,11 @@ ssh ovh 'tmux capture-pane -p -t claude-login'
 ```
 Expected: pane output contains a `https://` URL and a short instruction to open it and enter a code.
 
-- [ ] **Step 4: Hand the URL to the user, wait for them to complete browser login on their own machine with their Pro account**
+- [x] **Step 4: Hand the URL to the user, wait for them to complete browser login on their own machine with their Pro account**
 
 This step has no command — it's a checkpoint. Report the captured URL to the user and wait for them to say they've completed the browser-side login and have a code (if the flow requires pasting one back) or confirm it auto-completed.
 
-- [ ] **Step 5: If a code needs to be pasted back into the server-side prompt, send it via tmux**
+- [x] **Step 5: If a code needs to be pasted back into the server-side prompt, send it via tmux**
 
 Run (only if the captured pane is waiting for input):
 ```bash
@@ -234,7 +236,7 @@ ssh ovh 'tmux capture-pane -p -t claude-login'
 ```
 Expected: pane shows a success/logged-in message.
 
-- [ ] **Step 6: Verify login and clean up the tmux session**
+- [x] **Step 6: Verify login and clean up the tmux session**
 
 Run:
 ```bash
@@ -297,6 +299,8 @@ Expected: reports a logged-in account.
 ---
 
 ### Task 7: Hermes Agent — install and base configuration
+
+> **❌ SUPERSEDED — will not be done (verified 2026-09-02).** Hermes is not installed (`~/.hermes` absent, no `hermes` on PATH) and won't be: this server moved off the Hermes stack to CloudCLI (see [[claudeovh-cloudcli-telegram-deployment]] and the Execution Record's drift note). Tasks 7–10 are the Hermes stack and are all superseded together. Steps kept for historical reference only.
 
 **Files:** `~/.hermes/.env` and `~/.hermes/config.yaml` on server (created by the installer/CLI, not hand-authored from scratch)
 
@@ -363,6 +367,8 @@ Expected: shows `OpenRouter ✓` (or the relevant provider check), `.env file: �
 
 ### Task 8: Perplexity web-search backend
 
+> **❌ SUPERSEDED — will not be done (verified 2026-09-02).** Depends on Hermes's `~/.hermes/config.yaml`, which does not exist (see Task 7). Superseded with the rest of the Hermes stack.
+
 **Files:** Modify `~/.hermes/config.yaml` on server
 
 **Interfaces:**
@@ -410,6 +416,8 @@ Expected: the response includes a real, current result (not a hallucinated answe
 ---
 
 ### Task 9: Telegram gateway
+
+> **❌ SUPERSEDED — done differently (verified 2026-09-02).** No `hermes-gateway.service` exists. Telegram access is provided instead by the CloudCLI Telegram plugin (systemd + tmux) — see [[claudeovh-cloudcli-telegram-deployment]]. The Hermes-gateway approach below is superseded.
 
 **Files:** creates `/etc/systemd/system/hermes-gateway.service` on server (via `hermes gateway install`, not hand-authored)
 
@@ -477,6 +485,8 @@ Checkpoint — ask the user to send another message to the bot and confirm they 
 
 ### Task 10: Caddy reverse proxy + TLS for hermes.marko-lab.com
 
+> **❌ SUPERSEDED — replaced (verified 2026-09-02).** Caddy is installed and running, but serves `claude.marko-lab.com` (CloudCLI, → `127.0.0.1:3001`) and `meet.marko-lab.com:50443` (Jitsi). There is no `hermes.marko-lab.com` site and no Hermes dashboard on `127.0.0.1:9119` to proxy. The Caddy install itself happened; the Hermes-specific site below did not and won't.
+
 **Files:** create/modify `/etc/caddy/Caddyfile` on server
 
 **Interfaces:**
@@ -524,6 +534,8 @@ Expected: shows a valid certificate chain (issuer Let's Encrypt) and an HTTP sta
 ---
 
 ### Task 11: Clone `~/Amar73/hermes` on the server and wire up GitHub access
+
+> **⚠️ MET under a different name (verified 2026-09-02).** The intent — `gh` installed, authed as the right account, repo cloned and GitHub-connected — is satisfied: `gh 2.97.0` is installed and logged in as `Amar73`, and the repo (renamed `hermes` → `ClaudeOVH`) is cloned at `~/Amar73/ClaudeOVH` with `origin` set and in active use (this very session). The literal `~/Amar73/hermes` path is stale — it survives only as an empty stub (`.claude/` dir, not a git repo) and can be deleted. No further action needed on this task.
 
 **Files:** creates `~/Amar73/hermes/` directory tree on server (git clone of the existing repo — not new content)
 
@@ -589,6 +601,8 @@ Expected: shows the latest commit (the design spec added earlier in this project
 ---
 
 ### Task 12: Deployment notes, cleanup, and final verification
+
+> **⚠️ PARTLY MOOT (reviewed 2026-09-02).** Step 1 (sudo grant) is resolved — passwordless sudo kept, see Correction 2. Steps 2–4 close out the *original design spec's* readiness checklist, which was written for the Hermes stack that Tasks 7–10 abandoned; running it verbatim would verify a stack that no longer exists. If a closeout record is still wanted, it should describe the *actual* end state (Claude Code + CloudCLI + Jitsi + this hardening), not the Hermes checklist. Left open pending that decision.
 
 **Files:** modify `docs/superpowers/specs/2026-07-17-ovh-server-deployment-design.md` (append a "what actually happened" section, following the pattern used in the previous server's spec)
 
