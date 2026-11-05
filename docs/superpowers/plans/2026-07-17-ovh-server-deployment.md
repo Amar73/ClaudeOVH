@@ -687,7 +687,7 @@ Not currently exploitable remotely — SSH password auth is now off (see hardeni
 | Task | Status | Evidence |
 |---|---|---|
 | 1 — base packages | done | `git 1:2.47.3`, `build-essential 12.12`, `curl 8.14.1`, `ca-certificates 20250419`, `unzip 6.0-29` all `ii` |
-| 2 — ufw allowlist | done | active, INPUT policy DROP on v4 **and** v6; 80/tcp all; 22+443/tcp from the 5 listed IPs; `ENABLED=yes` in `/etc/ufw/ufw.conf` |
+| 2 — ufw allowlist | done | active, INPUT policy DROP on v4 **and** v6; 80/tcp all (closed 2026-10-27, see below); 22+443/tcp from the 5 listed IPs; `ENABLED=yes` in `/etc/ufw/ufw.conf` |
 | 3 — fail2ban | done | `sshd` jail up on `backend=systemd`, journal matches working, 2 bans to date |
 | 4 — unattended-upgrades | done | package 2.12, `enabled` + `active` |
 
@@ -710,3 +710,34 @@ Note: `systemctl is-active ufw` reports `inactive (dead)` — this is normal for
 ### Drift from the plan's assumptions
 
 The Caddyfile no longer serves `hermes.marko-lab.com` (the plan's Task 10 target). Current sites are `meet.marko-lab.com:50443` (Jitsi) and `claude.marko-lab.com` (proxying `127.0.0.1:3001`). Tasks 5–12 should be re-read against the live server before execution rather than assumed still accurate.
+
+## Execution Record — 2026-10-27 (ACME DNS-01, port 80 closed)
+
+Supersedes the "80/tcp open to all (ACME)" part of Task 2 and the status table above.
+
+### Why
+
+`80/tcp` was open to everyone only so Caddy could answer ACME HTTP-01. Let's Encrypt validates from a changing set of addresses, so port 80 cannot be IP-allowlisted; TLS-ALPN-01 needs 443 (also allowlisted), and the stock Caddy has no DNS provider. DNS for `marko-lab.com` is at OVH (`ns106.ovh.net`), so DNS-01 via the OVH API removes the need for any inbound port for certificates.
+
+### What was done
+
+1. **OVH API token** created at `https://api.eu.ovhcloud.com/createToken/` — validity *Unlimited*, rights `GET/POST/DELETE /domain/zone/marko-lab.com/*` and `POST /domain/zone/marko-lab.com/refresh`. Stored in `/etc/caddy/ovh.env` (`root:root`, `0600`) as four separate lines: `OVH_ENDPOINT=ovh-eu`, `OVH_APPLICATION_KEY`, `OVH_APPLICATION_SECRET`, `OVH_CONSUMER_KEY`.
+2. **Custom Caddy binary** with `github.com/caddy-dns/ovh` from `caddyserver.com/api/download` (asked for v2.11.4, the server returned **v2.11.7**) installed over `/usr/bin/caddy`. Backups: `/usr/bin/caddy.dpkg-orig-2.11.4`, `/etc/caddy/Caddyfile.bak-2026-10-27`. `apt-mark hold caddy` so apt cannot overwrite it.
+3. **Caddyfile**: new snippet `(ovhdns)` (`tls { dns ovh { … {env.OVH_*} } }`) imported by both sites. Env supplied by drop-in `/etc/systemd/system/caddy.service.d/ovh.conf` (`EnvironmentFile=/etc/caddy/ovh.env`). Applied with `systemctl restart caddy` (a binary swap needs restart, not reload).
+4. **Verified before closing the port:** throwaway Caddy instance with `acme_ca` = Let's Encrypt *staging*, own storage (`/tmp/caddy-acme-test`), ports 18080/18443, name `acme-dns01-test.marko-lab.com` → `authz_status: valid`, no leftover `_acme-challenge` TXT in the zone. Production certs untouched.
+5. **`ufw delete allow 80/tcp`** (v4 + v6). Checked from outside (amar224): `http://51.75.66.60/` times out, `https://claude.marko-lab.com` → 200.
+
+### Traps worth keeping
+
+- The OVH values were first pasted on **one line with trailing commas** (`OVH_ENDPOINT=ovh-eu, OVH_APPLICATION_KEY=…,`) → API answered `This application key is invalid`. systemd `EnvironmentFile` needs one `KEY=value` per line, no commas, no quotes needed.
+- A request to `/domain/zone/marko-lab.com` (no trailing path) returns 403 "not granted" because the rule is `…/*`; the plugin only uses `/record` and `/refresh`, so this is harmless.
+- `curl` from the server to its *own* public IP on port 80 still works (loopback bypasses ufw) — test closure from another host, here through the reverse tunnel `ssh -p 2224 amar@127.0.0.1` to amar224.
+- The classifier blocks "download and run a binary as root" even with `Bash(curl *)` allowed; explicit allow rules for the download, `./caddy-ovh *`, `sudo install … /usr/bin/caddy`, `sudo cp /usr/bin/caddy *` and `sudo apt-mark hold caddy` were added to `.claude/settings.local.json`.
+
+### Current state
+
+`80/tcp` closed; open to all only `50443/tcp` + `10000/udp` (Jitsi); `22/443` from the 5 trusted IPs. Renewal of `claude.marko-lab.com` and `meet.marko-lab.com` now goes through DNS-01. If renewal ever fails, check the OVH token first (`GET /auth/currentCredential`). **Rollback:** restore the two backups, remove the drop-in, `systemctl daemon-reload && systemctl restart caddy`, `ufw allow 80/tcp`, `apt-mark unhold caddy`.
+
+### Leftover
+
+`meet.marko-lab.com` (the user's personal Jitsi, lives on this box) briefly returned 502 right after the Caddy restart while its containers were still starting; it recovered on its own.
