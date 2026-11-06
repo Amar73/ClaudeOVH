@@ -20,3 +20,8 @@ When code is added to this project, update this file with:
 - **В конце сессии, если память менялась**: `git add -A && git commit && git push` там же.
 
 Подробности — в `README.md` внутри самой директории памяти.
+
+Память про сам сервер ovh (hardening/ufw/Caddy DNS-01, CloudCLI, Telegram-бот, сброс пароля CloudCLI)
+с 2026-11-06 лежит в проекте `servers`: `~/.claude/projects/-home-amar-Amar73-servers/memory/`
+(индекс — `servers-index.md`). При работе над ovh читай её оттуда; здесь остались туннель amar224,
+herdr, Perplexity и план развёртывания.
