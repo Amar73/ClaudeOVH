@@ -21,7 +21,7 @@ When code is added to this project, update this file with:
 
 Подробности — в `README.md` внутри самой директории памяти.
 
-Память про сам сервер ovh (hardening/ufw/Caddy DNS-01, CloudCLI, Telegram-бот, сброс пароля CloudCLI)
+Память про сам сервер ovh (hardening/ufw/Caddy DNS-01, Telegram-бот; CloudCLI удалён 2026-11-10)
 с 2026-11-06 лежит в проекте `servers`: `~/.claude/projects/-home-amar-Amar73-servers/memory/`
 (индекс — `servers-index.md`). При работе над ovh читай её оттуда; здесь остались туннель amar224,
 herdr, Perplexity и план развёртывания.
